@@ -1,0 +1,84 @@
+* { word-wrap:break-word !important; font-family: monospace;
+  margin: 0; padding: 0; }
+
+:root {
+  --width: 100ex;
+  --black: #000;
+  --white: #fff;
+}
+
+/* colorscheme variables */
+@media (prefers-color-scheme: light) {
+  :root {
+    --fg: #000;
+    --mg: #eee;
+    --bg: #fff;
+  }
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fg: #fff;
+    --mg: #fff;
+    --bg: #000;
+  }
+}
+
+/* settings for mobile devices*/
+@media only screen and (max-width: 768px) {
+  body { margin: 1ex; width: calc(100% - 2ex) !important; }
+  img { max-width: 100% !important; max-height: 400px; }
+}
+img { max-width: var(--width); max-height: 400px; }
+
+html { background: var(--bg); color: var(--fg); }
+body { margin: 1ex; width: var(--width); }
+
+a { color: var(--fg); background: var(--bg); text-decoration: none;}
+
+/* display local links using [] and external links using {} */
+body pre a::before { content: "["; }
+body pre a::after { content: "]"; }
+a[href*="//"]:not([href*="emile.space"])::before {
+  content: '{';
+}
+a[href*="//"]:not([href*="emile.space"])::after {
+  content: '}';
+}
+
+a:hover, a:active { color: var(--bg); background: var(--fg) }
+nav a:hover, a:active { color: var(--fg); background: var(--bg) }
+
+/* navigation bar magic */
+nav * { color: var(--black); }
+nav { margin: 1ex 0; background: var(--mg); }
+nav a { display:block; background: var(--mg); }
+nav ul { list-style: none; position: relative; display: inline-block; }
+nav ul li { display:inline-block; }
+nav ul ul { display: none; position: absolute; border: 1px solid var(--black); background: var(--white); }
+nav ul ul li { width: 100%; padding-right: 1ex; float:none; display:list-item; position: relative; }
+nav + ul li { display: inline-block;}
+
+/* only display the hover dropdown on non-mobile devices */
+@media only screen and (min-width: 768px) {
+  nav ul li:hover a + ul { display: inherit; white-space: nowrap; }
+}
+
+/* nav bar spacing char */
+nav ul li > a::after { content: " /"; }
+nav ul li > a:only-child::after { content: ""; }
+nav ul li:last-of-type a::after { content: ""; }
+
+h1 { margin: 3ex 0 1ex 0; width: 100%; background-color: var(--mg)}
+h2 { margin: 2ex 0 1ex 0; width: 100%; background-color: var(--mg)}
+h3 { margin: 1ex 0 1ex 0; width: 100%; /*background-color: var(--mg)*/}
+h1 a, h2 a, h3 a { padding-right: 1ex; }
+
+pre { white-space: pre-wrap; }
+
+/* display the list of folders in the current one as a vertical list, if the
+ * .vert class is present */
+nav + ul.vert li { display: block; }
+
+.w-100 { width: 100%; }
+
+.code { border-left: 1px solid var(--fg); padding-left: 1ex; }
