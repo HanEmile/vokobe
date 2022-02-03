@@ -501,13 +501,29 @@ fn recursive_read_dir(dir: &PathBuf, dir_only: bool) -> io::Result<Vec<PathBuf>>
         return Ok(vec![]);
     }
 
+    // get all entries in the gitignore file, if it exists
+    let gitignore_entries: Vec<PathBuf> = gitignore_entries(&dir)?;
+
     // store the child pathes
     let mut entries: Vec<PathBuf> = Vec::new();
     
     // iterate over all items in the dir, pushing the dirs pathes to the dirs
-    // vector for returnin it
-    for entry in fs::read_dir(dir)? {
-        let path = &entry?.path();
+    // vector for returning it
+    'outer: for entry in fs::read_dir(dir)? {
+        let dir_entry = &entry?;
+        let path = dir_entry.path();
+
+        // check if the current entry is part of the gitignore, if so, skip it
+        for gitignore_entry in &gitignore_entries {
+            if gitignore_entry.to_str() == Some("") {
+                continue;
+            }
+            if path.ends_with(gitignore_entry) {
+                println!("gitignore: gitignore_entry: {:?}", gitignore_entry);
+                println!("gitignore: path: {:?}", path);
+                continue 'outer;
+            }
+        }
 
         if dir_only == true {
             if path.is_dir() {
@@ -526,5 +542,22 @@ fn recursive_read_dir(dir: &PathBuf, dir_only: bool) -> io::Result<Vec<PathBuf>>
     }
 
     // return the dirs, the ones from this folder and the ones from all child folders
+    Ok(entries)
+}
+
+// try to open the gitignore file and read all entries from there.
+fn gitignore_entries(dir: &PathBuf) -> io::Result<Vec<PathBuf>> {
+    let gitignore_path = Path::new(&dir)
+        .join(Path::new(".gitignore"));
+
+    let mut entries: Vec<PathBuf> = Vec::new();
+    if let Ok(gitignore) = File::open(&gitignore_path) {
+        let reader = BufReader::new(gitignore);
+
+        for line in reader.lines() {
+            entries.push(PathBuf::from(line?));
+        }
+    }
+
     Ok(entries)
 }
