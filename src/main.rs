@@ -272,6 +272,7 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
     let mut files: Vec<PathBuf> = Vec::new();
 
     let mut vertical: bool = false;
+    let mut show_files: bool = false;
 
     for entry in fs::read_dir(search_path)? {
         let path = &entry?.path();
@@ -284,6 +285,9 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
             files.push(path.to_path_buf());
             if path.file_name().unwrap() == "vertical" {
                 vertical = true;
+            }
+            if path.file_name().unwrap() == "show_files" {
+                show_files = true;
             }
             println!("\t\t\t{:?}", path);
         }
@@ -322,6 +326,36 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
 
     file.write_all(format!(r#"
   </ul>"#).as_bytes())?;
+
+    if files.len() >= 1 && show_files == true {
+        file.write_all(format!(r#"<br>
+    <ul>"#).as_bytes())?;
+
+        for f in files {
+            let f = f.canonicalize()?;
+            let f = f.strip_prefix(&in_path)
+                .expect("could not strip in_path prefix");
+
+            let link = Path::new("/").join(f);
+            let link_str = link.as_path().to_str().unwrap();
+            let name = link.file_name().unwrap().to_str().unwrap();
+
+            if name == "README.md"
+                || name == "show_files"
+                || name.starts_with(".")
+                {
+                continue
+            };
+
+            file.write_all(format!(r#"
+        <li><a href="{}">{}</a></li>"#, link_str, name).as_bytes())?;
+            println!("\t\t{} {}", link_str, name);
+        }
+
+        file.write_all(format!(r#"
+    </ul>"#).as_bytes())?;
+    }
+
 
     Ok(())
 }
