@@ -226,6 +226,7 @@ fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path)
 
             println!("\t\t\t{:?} {:?}", name, link);
 
+            // don't add the current page to the dropdown, we're on it already!
             if name == nav_breadcrumb_name {
                 continue
             }
