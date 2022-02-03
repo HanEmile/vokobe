@@ -231,6 +231,12 @@ fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path)
                 continue
             }
 
+            // don't add items starting with a dot to the dropdown, they're
+            // hidden!
+            if name.starts_with(".") {
+                continue
+            }
+
             ////////////////////////////////////////////////////////////////////
             file.write_all(format!(r#"
                 <li><a href="{}">{}/</a></li>"#, link, name).as_bytes())?;
@@ -304,6 +310,10 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
         let link = Path::new("/").join(dir);
         let link_str = link.as_path().to_str().unwrap();
         let name = link.file_name().unwrap().to_str().unwrap();
+
+        if name.starts_with(".") {
+            continue
+        }
 
         file.write_all(format!(r#"
     <li><a href="{}">{}/</a></li>"#, link_str, name).as_bytes())?;
@@ -384,6 +394,13 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
                         .strip_prefix(raw_path)
                         .expect("could not strip raw_path prefix");
 
+                // write the link and the entry name to the file
+                let link = Path::new(raw_path).join(path);
+                let name = path.file_name().unwrap().to_str().unwrap();
+
+                if name.starts_with(".") {
+                    continue
+                }
 
                 // count the amount of segments in the path and write spaces for
                 // each
@@ -396,11 +413,47 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
                 let link = Path::new(raw_path).join(path);
                 file.write_all(
                     format!("<a href=\"/{}\">{}</a>\n",
-                        link.display(),
-                        path.file_name().unwrap().to_str().unwrap()
+                        link.display(), name, 
                         ).as_bytes()
                 )?;
             }
+
+        } else if line.starts_with(":::toc") {
+
+            for line in readme.split('\n') {
+                if line.starts_with("###") {
+                    let line = line.get(4..).unwrap();
+                    file.write_all(
+                        format!(
+                            r##"       <a href="#{}">{}</a>
+"##,
+                            sanitize(line.to_string()),
+                            line
+                        ).as_bytes()
+                    )?;
+                } else if line.starts_with("##") {
+                    let line = line.get(3..).unwrap();
+                    file.write_all(
+                        format!(
+                            r##"    <a href="#{}">{}</a>
+"##,
+                            sanitize(line.to_string()),
+                            line
+                        ).as_bytes()
+                    )?;
+                } else if line.starts_with("#") {
+                    let line = line.get(2..).unwrap();
+                    file.write_all(
+                        format!(
+                            r##"<a href="#{}">{}</a>
+"##,
+                            sanitize(line.to_string()),
+                            line
+                        ).as_bytes()
+                    )?;
+                }
+            }
+
             
         } else {
 
