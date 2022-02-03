@@ -217,7 +217,9 @@ fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path)
             let name = d.file_name().unwrap().to_str().unwrap();
             let rel_link 
                 = d.strip_prefix(abs_inpath)
-                    .expect("could not strip inpath prefix");
+                    .expect(format!(
+                        "could not strip the in_path prefix: {:?}",
+                        d).as_str());
 
             let link = Path::new("/").join(rel_link);
             let link = link.as_path().to_str().unwrap();
