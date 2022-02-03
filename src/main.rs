@@ -377,7 +377,10 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
     // cheap markdown 2 html converter
     for line in readme.split('\n') {
 
-        if line.starts_with("###") {
+        if line.starts_with("---") {
+            file.write_all(format!(r##"
+            <hr>"##).as_bytes())?;
+        } else if line.starts_with("###") {
             let heading = line.get(4..).unwrap();
             let heading_sanitized = sanitize(heading.to_string());
 
