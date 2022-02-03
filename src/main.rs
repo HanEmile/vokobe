@@ -31,7 +31,8 @@ fn main() -> std::io::Result<()> {
         println!("[i] {}", path.as_os_str().to_str().unwrap());
 
         let stripped_path = path.strip_prefix(&in_path)
-            .expect("could not strip the in_path prefix");
+            .expect(format!(
+                "could not strip the in_path prefix: {:?}", in_path).as_str());
 
         // copy images and other files to the output folder
         if path.is_file() {
