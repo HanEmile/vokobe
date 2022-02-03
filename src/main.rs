@@ -407,8 +407,9 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
             <h1><a href="#{a}">{b}</a></h1>
             <pre>"##, a = heading_sanitized, b = heading).as_bytes())?;
 
-        } else if line.starts_with(">") {
-            let line = line.get(1..).unwrap();
+        } else if line.starts_with("> ") {
+            let line = line.replace("<", "&lt");
+            let line = line.get(2..).unwrap();
             file.write_all(format!("</pre><pre class=\"code\">{}</pre><pre>\n", line).as_bytes())?;
 
         } else if line.starts_with(":::tree") {
