@@ -4,23 +4,49 @@
 pub use std;
 
 use std::path::{Path, PathBuf};
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Write, BufRead, BufReader};
 use std::fs::{self, File};
-use std::time;
+use std::{time};
+use structopt::StructOpt;
+
+#[derive(Debug, StructOpt)]
+#[structopt(name = "vokobe", about = "A static site generator")]
+struct Opt {
+    /// Input path 
+    #[structopt(parse(from_os_str))]
+    in_path: PathBuf,
+
+    /// Output path
+    #[structopt(parse(from_os_str))]
+    out_path: PathBuf,
+
+    /// Site name (e.g. emile.space)
+    site_name: String,
+
+    /// Activate sending analytics to stats.emile.space
+    // -a and --analytics will be generated
+    // analytics are sent to stats.emile.space
+    #[structopt(short, long)]
+    analytics: bool,
+}
 
 fn main() -> std::io::Result<()> {
 
-    // the input and output pathes
-    let in_path = Path::new("../emile.space/in").to_path_buf();
-    let out_path = Path::new("../emile.space/out").to_path_buf();
+    let opt = Opt::from_args();
+
+    let in_path = opt.in_path;
+    let out_path = opt.out_path;
 
     println!("inpath: {}", in_path.display());
     println!("outpath: {}", out_path.display());
 
     // read the style
-    let mut style_file = File::open("./style.css")?;
+    let style_path = Path::new(&in_path).join("style.css");
+    let mut style_file = File::open(style_path)
+        .expect("could not open style file");
     let mut style = String::new();
-    style_file.read_to_string(&mut style)?;
+    style_file.read_to_string(&mut style)
+        .expect("could not read style file to string");
 
     // read all dirs in the input path
     let pathes = recursive_read_dir(&in_path, false)?;
@@ -74,9 +100,9 @@ fn main() -> std::io::Result<()> {
             fs::create_dir_all(index_path)?;
             let mut file = File::create(&index_file)?;
 
-            write_header(&mut file, &style)?;
-            write_body_start(&mut file)?;
-            write_nav(&mut file, in_path.as_path(), raw_path)?;
+            write_header(&mut file, &opt.site_name, &style)?;
+            write_body_start(&mut file, &opt.site_name)?;
+            write_nav(&mut file, in_path.as_path(), raw_path, opt.analytics)?;
             write_same_level(&mut file, in_path.as_path(), raw_path)?;
             write_readme_content(&mut file, in_path.as_path(), raw_path)?;
             write_footer(&mut file)?;
@@ -90,7 +116,7 @@ fn main() -> std::io::Result<()> {
 }
 
 /// Write the html header including the style file
-fn write_header(file: &mut File, style: &String) -> std::io::Result<()>{
+fn write_header(file: &mut File, site_name: &String, style: &String) -> std::io::Result<()>{
 
     // write the header including the style file
     file.write_all(format!(r#"<!DOCTYPE html>
@@ -99,36 +125,41 @@ fn write_header(file: &mut File, style: &String) -> std::io::Result<()>{
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>emile.space</title>
+  <title>{}</title>
 
   <style>
   {}
   </style>
 </head>
-    "#, style).as_bytes())?;
+    "#, site_name, style).as_bytes())?;
 
     Ok(())
 }
 
-fn write_body_start(file: &mut File) -> std::io::Result<()>{
+fn write_body_start(file: &mut File, site_name: &String) -> std::io::Result<()>{
     file.write_all(format!(r#"
 <body>
   <header>
-    <a href="/">emile.space</a>
-  </header>"#).as_bytes())?;
+    <a href="/">{}</a>
+  </header>"#, site_name).as_bytes())?;
 
     Ok(())
 }
 
 /// Write the navigation section to the given file
-fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path)
+fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path, analytics: bool)
     -> std::io::Result<()> {
 
-    ////////////////////////////////////////////////////////////////////////////
-    file.write_all(format!(r#"
+    if analytics == true {
+        file.write_all(format!(r#"
+  <img src="https://stats.emile.space/count?p=/{}">
+  <nav>
+    <ul>"#, raw_path.to_str().unwrap()).as_bytes())?;
+    } else {
+        file.write_all(format!(r#"
   <nav>
     <ul>"#).as_bytes())?;
-    ////////////////////////////////////////////////////////////////////////////
+    }
 
     // get the nav bar components
     let components = raw_path.components().collect::<Vec<_>>();
@@ -447,8 +478,6 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
                     file.write_all(r#"    "#.as_bytes())?;
                 }
 
-                // write the linke and the entry name to the file
-                let link = Path::new(raw_path).join(path);
                 file.write_all(
                     format!("<a href=\"/{}\">{}</a>\n",
                         link.display(), name, 
