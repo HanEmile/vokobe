@@ -490,6 +490,8 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
             for line in readme.split('\n') {
                 if line.starts_with("###") {
                     let line = line.get(4..).unwrap();
+                    // trim the line to remove the trailing whitespace
+                    let line = line.trim();
                     file.write_all(
                         format!(
                             r##"       <a href="#{}">{}</a>
@@ -500,6 +502,7 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
                     )?;
                 } else if line.starts_with("##") {
                     let line = line.get(3..).unwrap();
+                    let line = line.trim();
                     file.write_all(
                         format!(
                             r##"    <a href="#{}">{}</a>
@@ -510,6 +513,7 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
                     )?;
                 } else if line.starts_with("#") {
                     let line = line.get(2..).unwrap();
+                    let line = line.trim();
                     file.write_all(
                         format!(
                             r##"<a href="#{}">{}</a>
