@@ -1,12 +1,14 @@
-// pull the std into scope and inline it so that we get documentation for it,
-// even when running offline
+/*
+pull the std into scope and inline it so that we get documentation for it,
+even when running offline
+*/
 #[doc(inline)]
 pub use std;
 
 use std::path::{Path, PathBuf};
 use std::io::{self, Read, Write, BufRead, BufReader};
 use std::fs::{self, File};
-use std::{time};
+use std::time;
 use structopt::StructOpt;
 
 #[derive(Debug, StructOpt)]
@@ -14,11 +16,11 @@ use structopt::StructOpt;
 struct Opt {
     /// Input path 
     #[structopt(parse(from_os_str))]
-    in_path: PathBuf,
+    input_path: PathBuf,
 
     /// Output path
     #[structopt(parse(from_os_str))]
-    out_path: PathBuf,
+    output_path: PathBuf,
 
     /// Site name (e.g. emile.space)
     site_name: String,
@@ -34,11 +36,8 @@ fn main() -> std::io::Result<()> {
 
     let opt = Opt::from_args();
 
-    let in_path = opt.in_path;
-    let out_path = opt.out_path;
-
-    println!("inpath: {}", in_path.display());
-    println!("outpath: {}", out_path.display());
+    let in_path = opt.input_path;
+    let output_path = opt.output_path;
 
     // read the style
     let style_path = Path::new(&in_path).join("style.css");
@@ -51,11 +50,9 @@ fn main() -> std::io::Result<()> {
     // read all dirs in the input path
     let pathes = recursive_read_dir(&in_path, false)?;
 
-    println!("---");
-    for path in pathes {
-        println!("\n");
-        println!("[i] {}", path.as_os_str().to_str().unwrap());
+    println!("Got {} files", pathes.len());
 
+    for path in pathes {
         let stripped_path = path.strip_prefix(&in_path)
             .expect(format!(
                 "could not strip the in_path prefix: {:?}", in_path).as_str());
@@ -65,12 +62,11 @@ fn main() -> std::io::Result<()> {
 
             // define the source and destination
             let src = Path::new(&in_path).join(stripped_path);
-            let dst = Path::new(&out_path).join(stripped_path);
+            let dst = Path::new(&output_path).join(stripped_path);
 
-            // define the destination folder (the dst path without the file) and
-            // create it
+            // define the destination folder (the dst path without the file) and create it
             let mut dst_folder = dst.clone();
-            dst_folder.pop();
+            dst_folder.pop(); // remove the file itself from the path
             fs::create_dir_all(dst_folder)?;
 
             // copy the file to the destination
@@ -78,7 +74,6 @@ fn main() -> std::io::Result<()> {
         }
 
         if stripped_path.ends_with("README.md") {
-            println!("\tstripped_path: {:?}", stripped_path);
 
             // define the "raw" path (no infile prefix, no file)
             let mut ancestors = stripped_path.ancestors();
@@ -86,20 +81,20 @@ fn main() -> std::io::Result<()> {
 
             let raw_path = ancestors.next()
                 .expect("could not extract next ancestor");
-            println!("\traw_path: {:?}", raw_path);
 
             // out + rawpath
-            let index_path = out_path.join(raw_path);
-            println!("\tindex_path: {:?}", index_path);
+            let index_path = output_path.join(raw_path);
 
             // (out + rawpath) + "index.html"
             let index_file = index_path.join("index.html");
-            println!("\tindex_file: {:?}", index_file);
 
-            // - create the dir for the index.html as well as the index.html itself
+            // - create the dir for the index.html as well as the index.html
+            // itself
             fs::create_dir_all(index_path)?;
             let mut file = File::create(&index_file)?;
 
+            // this is the main block calling all other smaller functions. The
+            // whole output is compsed here
             write_header(&mut file, &opt.site_name, &style)?;
             write_body_start(&mut file, &opt.site_name)?;
             write_nav(&mut file, in_path.as_path(), raw_path, opt.analytics)?;
@@ -116,6 +111,9 @@ fn main() -> std::io::Result<()> {
 }
 
 /// Write the html header including the style file
+/// TODO: Don't add the style file into each compiled html output, as the
+/// style can be included allowing the user to cache the style file in their
+/// browser.
 fn write_header(file: &mut File, site_name: &String, style: &String) -> std::io::Result<()>{
 
     // write the header including the style file
@@ -136,6 +134,8 @@ fn write_header(file: &mut File, site_name: &String, style: &String) -> std::io:
     Ok(())
 }
 
+/// write the start of the html body tag and the header linking back to the
+/// site itself.
 fn write_body_start(file: &mut File, site_name: &String) -> std::io::Result<()>{
     file.write_all(format!(r#"
 <body>
@@ -151,10 +151,15 @@ fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path, analytics: bool)
     -> std::io::Result<()> {
 
     if analytics == true {
+        /*
         file.write_all(format!(r#"
   <img src="https://stats.emile.space/count?p=/{}">
   <nav>
     <ul>"#, raw_path.to_str().unwrap()).as_bytes())?;
+        */
+        file.write_all(format!(r#"
+  <nav>
+    <ul>"#,).as_bytes())?;
     } else {
         file.write_all(format!(r#"
   <nav>
@@ -177,11 +182,6 @@ fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path, analytics: bool)
         // (["a"], ["a", "b"], ["a", "b", "c"])
         let subpath_components = &slice[..i+1];
         i += 1;
-
-        println!("\tsubpath_components:");
-        subpath_components.iter().for_each(|c| {
-            println!("\t\t{:?}", c);
-        });
 
         let mut subpath_path = PathBuf::new();
 
@@ -225,8 +225,6 @@ fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path, analytics: bool)
         // the subpath_path is now: inpath + subpath + ../
         subpath_path.push("..");
 
-        println!("\t\tsubpath_path: {:?}", subpath_path);
-
         // read all dirs in the subpath_path, add them to the dirs vector, so
         // that we get a vector containing all the dirs we want
         let mut dirs = Vec::new();
@@ -254,8 +252,6 @@ fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path, analytics: bool)
 
             let link = Path::new("/").join(rel_link);
             let link = link.as_path().to_str().unwrap();
-
-            println!("\t\t\t{:?} {:?}", name, link);
 
             // don't add the current page to the dropdown, we're on it already!
             if name == nav_breadcrumb_name {
@@ -296,9 +292,6 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
 
     let search_path = Path::new(in_path).join(raw_path);
 
-    println!("\tsame_level:");
-    println!("\t\t{:?}", search_path);
-
     let mut dirs: Vec<PathBuf> = Vec::new();
     let mut files: Vec<PathBuf> = Vec::new();
 
@@ -310,7 +303,6 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
 
         if path.is_dir() {
             dirs.push(path.to_path_buf());
-            println!("\t\t\t{:?}", path);
         }
         if path.is_file() {
             files.push(path.to_path_buf());
@@ -320,7 +312,6 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
             if path.file_name().unwrap() == "show_files" {
                 show_files = true;
             }
-            println!("\t\t\t{:?}", path);
         }
     }
 
@@ -352,7 +343,6 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
 
         file.write_all(format!(r#"
     <li><a href="{}">{}/</a></li>"#, link_str, name).as_bytes())?;
-        println!("\t\t{} {}", link_str, name);
     }
 
     file.write_all(format!(r#"
@@ -380,7 +370,6 @@ fn write_same_level(file: &mut File, in_path: &Path, raw_path: &Path)
 
             file.write_all(format!(r#"
         <li><a href="{}">{}</a></li>"#, link_str, name).as_bytes())?;
-            println!("\t\t{} {}", link_str, name);
         }
 
         file.write_all(format!(r#"
@@ -467,10 +456,6 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
                 let link = Path::new(raw_path).join(path);
                 let name = path.file_name().unwrap().to_str().unwrap();
 
-                if name.starts_with(".") {
-                    continue
-                }
-
                 // count the amount of segments in the path and write spaces for
                 // each
                 let segments = path.iter().count();
@@ -521,7 +506,6 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
                 }
             }
 
-            
         } else {
 
             // for the case that nothing of the above matches, just write the
@@ -537,13 +521,16 @@ fn write_footer(file: &mut File) -> std::io::Result<()> {
     file.write_all(format!(r#"<br>
     <br>
     <br>
-———
-emile - {:?}
+    </pre>
+<a href="https://lieu.cblgh.org/" target="_blank" rel="noopener" class="icon"><img class="webring" src="/lieu.svg" alt="lieu webring search engine" height="32px"/></a>
+<a href="https://webring.xxiivv.com/#emile" target="_blank" rel="noopener" class="icon"><img class="webring" src="/webring.svg" alt="XXIIVV webring" height="32px"/></a>
+<a rel="me" href="https://chaos.social/@hanemile" target="_blank" class="icon"><img class="webring" src="/mastodon.svg" alt="mastodon" height="32px"/></a>
+    <pre>emile - {:?} - generated using <a href="https://github.com/hanemile/vokobe">vokobe {:?}</a><pre>
 </body>
 </html>
-    <pre>"#,
-    time::SystemTime::now()
-        .duration_since(time::SystemTime::UNIX_EPOCH).unwrap()
+"#,
+    time::SystemTime::now().duration_since(time::SystemTime::UNIX_EPOCH).unwrap(),
+    env!("CARGO_PKG_VERSION")
     ).as_bytes())?;
 
     Ok(())
@@ -568,7 +555,7 @@ fn recursive_read_dir(dir: &PathBuf, dir_only: bool) -> io::Result<Vec<PathBuf>>
         return Ok(vec![]);
     }
 
-    // get all entries in the gitignore file, if it exists
+        // get all entries in the gitignore file, if it exists
     let gitignore_entries: Vec<PathBuf> = gitignore_entries(&dir)?;
 
     // store the child pathes
@@ -580,14 +567,20 @@ fn recursive_read_dir(dir: &PathBuf, dir_only: bool) -> io::Result<Vec<PathBuf>>
         let dir_entry = &entry?;
         let path = dir_entry.path();
 
+        // skip hidden folders
+        if path.starts_with(".") {
+            continue 'outer;
+        }
+        if dir.starts_with(".") {
+            continue 'outer;
+        }
+
         // check if the current entry is part of the gitignore, if so, skip it
         for gitignore_entry in &gitignore_entries {
             if gitignore_entry.to_str() == Some("") {
                 continue;
             }
             if path.ends_with(gitignore_entry) {
-                println!("gitignore: gitignore_entry: {:?}", gitignore_entry);
-                println!("gitignore: path: {:?}", path);
                 continue 'outer;
             }
         }
