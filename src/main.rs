@@ -280,7 +280,13 @@ fn write_nav(file: &mut File, in_path: &Path, raw_path: &Path, analytics: bool)
     ////////////////////////////////////////////////////////////////////////////
     file.write_all(format!(r#"
     </ul>
-  </nav>"#).as_bytes())?;
+    <ul style="float: right">
+        <li>{:?}</li>
+        <li>
+            <a href="README.md">.md</a>
+        </li>
+    </ul>
+  </nav>"#, in_path.metadata()?.modified()?.duration_since(std::time::UNIX_EPOCH).unwrap().as_secs()).as_bytes())?;
     ////////////////////////////////////////////////////////////////////////////
 
     Ok(())
@@ -394,38 +400,145 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
 
     file.write_all(format!("<pre>").as_bytes())?;
 
+    // counting the occurrence of `---`
+    let mut hrule_count = 0;
+    let mut in_yaml_metadata_block= false;
+
+    let mut level_1_heading_num = 0;
+    let mut level_2_heading_num = 0;
+    let mut level_3_heading_num = 0;
+    let mut level_4_heading_num = 0;
+    let mut level_5_heading_num = 0;
+
     // cheap markdown 2 html converter
     for line in readme.split('\n') {
 
+        // 1 == 2, as I'm not sure how to comment out the file write 5 lines or so below
+        if in_yaml_metadata_block && 1 == 2 {
+            // if we find the end of the yaml metadata block, break this
+            if line.starts_with("---") {
+                in_yaml_metadata_block = false;
+                continue
+            } else {
+                file.write_all(format!(r##"yaml_line: {}
+"##, line).as_bytes())?;
+                continue
+            }
+        }
+
+        // if we've got a horizontal rule, it can be two things: the start and
+        // end of a yaml-metadata block or an actual horizontal rule.
+        //
+        // If it's yaml metadata, read it all, but don't print it, store it
+        // for later
+        // If it's a horizontal rule, print the horizontal rule
         if line.starts_with("---") {
+
+            // store the yaml metadata
+            if hrule_count == 0 {
+                in_yaml_metadata_block = true;
+                continue
+            }                 
+            hrule_count += 1;
+
+            // print the horizontal rule
             file.write_all(format!(r##"
             <hr>"##).as_bytes())?;
+
+        } else if line.starts_with("#####") {
+            let heading = line.get(6..).unwrap();
+            let heading_sanitized = sanitize(heading.to_string());
+
+            level_5_heading_num += 1;
+
+            file.write_all(format!(r##"</pre>
+            <span id="{a}"></span>
+            <h5><a href="#{a}">{h1}.{h2}.{h3}.{h4}.{h5}. {b}</a></h3>
+            <pre>"##,
+                a = heading_sanitized,
+                b = heading,
+                h1 = level_1_heading_num,
+                h2 = level_2_heading_num,
+                h3 = level_3_heading_num,
+                h4 = level_4_heading_num,
+                h5 = level_5_heading_num,
+            ).as_bytes())?;
+
+        } else if line.starts_with("####") {
+            let heading = line.get(5..).unwrap();
+            let heading_sanitized = sanitize(heading.to_string());
+
+            level_4_heading_num += 1;
+            level_5_heading_num = 0;
+
+            file.write_all(format!(r##"</pre>
+            <span id="{a}"></span>
+            <h4><a href="#{a}">{h1}.{h2}.{h3}.{h4}. {b}</a></h3>
+            <pre>"##,
+                a = heading_sanitized,
+                b = heading,
+                h1 = level_1_heading_num,
+                h2 = level_2_heading_num,
+                h3 = level_3_heading_num,
+                h4 = level_4_heading_num,
+            ).as_bytes())?;
+
         } else if line.starts_with("###") {
             let heading = line.get(4..).unwrap();
             let heading_sanitized = sanitize(heading.to_string());
 
+            level_3_heading_num += 1;
+            level_4_heading_num = 0;
+            level_5_heading_num = 0;
+
             file.write_all(format!(r##"</pre>
             <span id="{a}"></span>
-            <h3><a href="#{a}">{b}</a></h3>
-            <pre>"##, a = heading_sanitized, b = heading).as_bytes())?;
+            <h3><a href="#{a}">{h1}.{h2}.{h3}. {b}</a></h3>
+            <pre>"##,
+                a = heading_sanitized,
+                b = heading,
+                h1 = level_1_heading_num,
+                h2 = level_2_heading_num,
+                h3 = level_3_heading_num,
+            ).as_bytes())?;
 
         } else if line.starts_with("##") {
             let heading = line.get(3..).unwrap();
             let heading_sanitized = sanitize(heading.to_string());
 
+            level_2_heading_num += 1;
+            level_3_heading_num = 0;
+            level_4_heading_num = 0;
+            level_5_heading_num = 0;
+
             file.write_all(format!(r##"</pre>
             <span id="{a}"></span>
-            <h2><a href="#{a}">{b}</a></h2>
-            <pre>"##, a = heading_sanitized, b = heading).as_bytes())?;
+            <h2><a href="#{a}">{h1}.{h2}. {b}</a></h2>
+            <pre>"##,
+                a = heading_sanitized,
+                b = heading,
+                h1 = level_1_heading_num,
+                h2 = level_2_heading_num,
+            ).as_bytes())?;
 
         } else if line.starts_with("#") {
             let heading = line.get(2..).unwrap();
             let heading_sanitized = sanitize(heading.to_string());
 
+            level_1_heading_num += 1;
+            level_2_heading_num = 0;
+            level_3_heading_num = 0;
+            level_4_heading_num = 0;
+            level_5_heading_num = 0;
+
             file.write_all(format!(r##"</pre>
             <span id="{a}"></span>
-            <h1><a href="#{a}">{b}</a></h1>
-            <pre>"##, a = heading_sanitized, b = heading).as_bytes())?;
+            <h1><a href="#{a}">{h1}. {b}</a></h1>
+            <pre>"##,
+                a = heading_sanitized,
+                b = heading,
+                h1 = level_1_heading_num
+            ).as_bytes())?;
 
         } else if line.starts_with("> ") {
             let line = line.replace("<", "&lt");
@@ -434,16 +547,18 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
 
         } else if line.starts_with(":::tree") {
 
+            // TODO: add some parameter controlling if the list is ascending or descending (reverse the list before writing)
+
             // get all dirs in the current dir recursively
             let tree_files_path = Path::new(in_path).join(raw_path);
             let mut tree_files
                 = recursive_read_dir(&tree_files_path, true)?;
-            
+
             // sort them, otherwise we'll get complete chaos
             tree_files.sort();
 
             for path in tree_files {
-
+                
                 // strip the inpath prefix and raw_path prefix, as we don't need
                 // them
                 let path 
@@ -451,6 +566,16 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
                         .expect("could not strip in_file prefix")
                         .strip_prefix(raw_path)
                         .expect("could not strip raw_path prefix");
+
+                // convert the path to a string, check if it contains a hidden
+                // path by checking if it contains a `/.`, if so, skip this one
+                if String::from(path.to_str().unwrap()).contains("/.") {
+                    continue
+                }
+                if String::from(path.to_str().unwrap()).starts_with(".") {
+                    continue
+                }
+                println!("[i] {:?}", path);
 
                 // write the link and the entry name to the file
                 let link = Path::new(raw_path).join(path);
@@ -472,38 +597,103 @@ fn write_readme_content(file: &mut File, in_path: &Path, raw_path: &Path)
 
         } else if line.starts_with(":::toc") {
 
+            // TODO: depth parameter for controlling the depth of the table of contents
+
+            let mut level_1_num = 0;
+            let mut level_2_num = 0;
+            let mut level_3_num = 0;
+            let mut level_4_num = 0;
+            let mut level_5_num = 0;
+
             for line in readme.split('\n') {
-                if line.starts_with("###") {
+                if line.starts_with("#####") {
+                    let line = line.get(6..).unwrap();
+                    // trim the line to remove the trailing whitespace
+                    let line = line.trim();
+                    level_5_num += 1;
+                    file.write_all(
+                        format!(
+                            r##"           <a href="#{}">{}.{}.{}.{}.{}. {}</a>
+"##,
+                            sanitize(line.to_string()),
+                            level_1_num,
+                            level_2_num,
+                            level_3_num,
+                            level_4_num,
+                            level_5_num,
+                            line
+                        ).as_bytes()
+                    )?;
+                } else if line.starts_with("####") {
+                    let line = line.get(5..).unwrap();
+                    // trim the line to remove the trailing whitespace
+                    let line = line.trim();
+                    level_4_num += 1;
+                    level_5_num = 0;
+                    file.write_all(
+                        format!(
+                            r##"         <a href="#{}">{}.{}.{}.{}. {}</a>
+"##,
+                            sanitize(line.to_string()),
+                            level_1_num,
+                            level_2_num,
+                            level_3_num,
+                            level_4_num,
+                            line
+                        ).as_bytes()
+                    )?;
+                } else if line.starts_with("###") {
                     let line = line.get(4..).unwrap();
                     // trim the line to remove the trailing whitespace
                     let line = line.trim();
+                    level_3_num += 1;
+                    level_4_num = 0;
+                    level_5_num = 0;
                     file.write_all(
                         format!(
-                            r##"       <a href="#{}">{}</a>
+                            r##"       <a href="#{}">{}.{}.{}. {}</a>
 "##,
                             sanitize(line.to_string()),
+                            level_1_num,
+                            level_2_num,
+                            level_3_num,
                             line
                         ).as_bytes()
                     )?;
                 } else if line.starts_with("##") {
                     let line = line.get(3..).unwrap();
                     let line = line.trim();
+                    level_2_num += 1;
+                    level_3_num = 0;
+                    level_4_num = 0;
+                    level_5_num = 0;
+
                     file.write_all(
                         format!(
-                            r##"    <a href="#{}">{}</a>
+                            //r##"    <a href="#{}">{}.{}. {}</a>
+                            r##"    <a href="#{}">{}.{}. {}</a>
 "##,
                             sanitize(line.to_string()),
+                            level_1_num,
+                            level_2_num,
                             line
                         ).as_bytes()
                     )?;
                 } else if line.starts_with("#") {
                     let line = line.get(2..).unwrap();
                     let line = line.trim();
+                    level_1_num += 1;
+                    level_2_num = 0;
+                    level_3_num = 0;
+                    level_4_num = 0;
+                    level_5_num = 0;
+
                     file.write_all(
                         format!(
-                            r##"<a href="#{}">{}</a>
+                            r##"<a href="#{}">{}. {}</a>
 "##,
                             sanitize(line.to_string()),
+                            level_1_num,
                             line
                         ).as_bytes()
                     )?;
@@ -554,9 +744,14 @@ fn sanitize(input: String) -> String {
 
 /// Return a list of all files in the directory, recursively.
 fn recursive_read_dir(dir: &PathBuf, dir_only: bool) -> io::Result<Vec<PathBuf>> {
+
     // return an empty vec if the given path is not a directory
     if dir.is_dir() == false {
         return Ok(vec![]);
+    }
+
+    if dir.starts_with(".") {
+       return Ok(vec![]); 
     }
 
         // get all entries in the gitignore file, if it exists
@@ -573,10 +768,12 @@ fn recursive_read_dir(dir: &PathBuf, dir_only: bool) -> io::Result<Vec<PathBuf>>
 
         // skip hidden folders
         if path.starts_with(".") {
-            continue 'outer;
+            //continue 'outer;
+            break 'outer;
         }
         if dir.starts_with(".") {
-            continue 'outer;
+            //continue 'outer;
+            break 'outer;
         }
 
         // check if the current entry is part of the gitignore, if so, skip it
