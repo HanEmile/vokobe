@@ -6,33 +6,29 @@
   };
 
   outputs = { self, flake-utils, naersk, nixpkgs }:
-    #flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = (import nixpkgs) {
-          # inherit system;
-          system = "x86_64-linux";
-        };
-
-        naersk' = pkgs.callPackage naersk {};
-        
-      in rec {
-        # For `nix build` & `nix run`:
-        defaultPackage = naersk'.buildPackage {
-          src = ./.;
-        };
-
-        # For `nix develop` (optional, can be skipped):
-        devShell = pkgs.mkShell {
-          nativeBuildInputs = with pkgs; [ rustc cargo ];
-        };
-
-        # hydraJobs."<attr>"."<system>" = derivation;
-
-        hydraJobs = {
-          build."x86_64-linux" = naersk'.buildPackage {
-            src = ./.;
-          };
-        };
+    let
+      pkgs = (import nixpkgs) {
+        system = "x86_64-linux";
       };
-    # );
+
+      naersk' = pkgs.callPackage naersk {};
+      
+    in rec {
+      packages."x86_64-linux".vokobe = naersk'.buildPackage {
+        src = ./.;
+      };
+    
+      # For `nix build` & `nix run`:
+      defaultPackage = packages."x86_64-linux".vokobe;
+
+      # For `nix develop` (optional, can be skipped):
+      devShell = pkgs.mkShell {
+        nativeBuildInputs = with pkgs; [ rustc cargo ];
+      };
+
+      # hydraJobs."<attr>"."<system>" = derivation;
+      hydraJobs = {
+        build."x86_64-linux" = packages."x86_64-linux".vokobe;
+      };
+    };
 }
