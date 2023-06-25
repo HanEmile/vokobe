@@ -24,6 +24,14 @@
         devShell = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [ rustc cargo ];
         };
+
+        # hydraJobs."<attr>"."<system>" = derivation;
+
+        hydraJobs = {
+          build."x86_64-linux" = naersk'.buildPackage {
+            src = ./.;
+          };
+        };
       }
     );
 }
