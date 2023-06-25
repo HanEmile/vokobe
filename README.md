@@ -2,6 +2,8 @@
 
 A minimal static site generator tailored to my needs.
 
+[https://hydra.emile.space/project/vokobe](https://hydra.emile.space/project/vokobe)
+
 ## Installation
 
 Install my-project with npm
