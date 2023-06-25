@@ -6,10 +6,10 @@
   };
 
   outputs = { self, flake-utils, naersk, nixpkgs }:
-    flake-utils.lib.eachDefaultSystem (system:
+    #flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = (import nixpkgs) {
-          inherit system;
+          # inherit system;
         };
 
         naersk' = pkgs.callPackage naersk {};
@@ -32,6 +32,6 @@
             src = ./.;
           };
         };
-      }
-    );
+      };
+    # );
 }
