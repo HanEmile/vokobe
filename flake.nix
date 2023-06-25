@@ -10,6 +10,7 @@
       let
         pkgs = (import nixpkgs) {
           # inherit system;
+          system = "x86_64-linux";
         };
 
         naersk' = pkgs.callPackage naersk {};
