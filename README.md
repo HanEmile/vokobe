@@ -2,7 +2,7 @@
 
 A minimal static site generator tailored to my needs.
 
-[https://hydra.emile.space/project/vokobe](https://hydra.emile.space/project/vokobe)
+CI: [https://hydra.emile.space/project/vokobe](https://hydra.emile.space/project/vokobe)
 
 ## Installation
 
