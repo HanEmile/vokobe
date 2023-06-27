@@ -17,15 +17,12 @@
       packages."x86_64-linux".vokobe = naersk'.buildPackage {
         src = ./.;
 
-        meta = {
+        meta = with pkgs.lib; {
           description = "A minimal static site generator tailored to my needs.";
           homepage    = "https://git.emile.space/hanemile/vokobe";
-          license     = {
-            spdxId = "MIT";
-            fullName = "MIT License";
-          };
-          platforms   = nixpkgs.platforms.all;
-          maintainers = with nixpkgs.maintainers; [
+          license     = licenses.mit;
+          platforms   = platforms.all;
+          maintainers = with maintainers; [
             hanemile
           ];
         };
