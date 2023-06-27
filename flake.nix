@@ -20,7 +20,10 @@
         meta = {
           description = "A minimal static site generator tailored to my needs.";
           homepage    = "https://git.emile.space/hanemile/vokobe";
-          license     = nixpkgs.licenses.mit;
+          license     = {
+            spdxId = "MIT";
+            fullName = "MIT License";
+          };
           platforms   = nixpkgs.platforms.all;
           maintainers = with nixpkgs.maintainers; [
             hanemile
