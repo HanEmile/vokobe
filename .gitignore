@@ -1,3 +1,7 @@
+# the cargo build artefacts
 debug/
 target/
+
+# the nix result symlink
+result
 
