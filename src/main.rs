@@ -716,6 +716,7 @@ fn write_footer(file: &mut File) -> std::io::Result<()> {
     <br>
     <br>
     </pre>
+<a href="https://chaos.social/@hanemile.rss" target="_blank" rel="noopener" class="icon"><img class="webring" src="/rss.svg" alt="rss feed of @hanemile@chaos.social mastodon" height="32px"/></a>
 <a href="https://lieu.cblgh.org/" target="_blank" rel="noopener" class="icon"><img class="webring" src="/lieu.svg" alt="lieu webring search engine" height="32px"/></a>
 <a href="https://webring.xxiivv.com/#emile" target="_blank" rel="noopener" class="icon"><img class="webring" src="/webring.svg" alt="XXIIVV webring" height="32px"/></a>
 <a rel="me" href="https://chaos.social/@hanemile" target="_blank" class="icon"><img class="webring" src="/mastodon.svg" alt="mastodon" height="32px"/></a>
