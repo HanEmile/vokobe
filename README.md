@@ -4,9 +4,7 @@ A minimal static site generator tailored to my needs.
 
 CI: [https://hydra.emile.space/project/vokobe](https://hydra.emile.space/project/vokobe)
 
-## Installation
-
-Install my-project with cargo
+## Build
 
 ```bash
 ; cargo build --release
