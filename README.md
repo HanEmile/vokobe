@@ -6,7 +6,7 @@ CI: [https://hydra.emile.space/project/vokobe](https://hydra.emile.space/project
 
 ## Installation
 
-Install my-project with npm
+Install my-project with cargo
 
 ```bash
 ; cargo build --release
@@ -14,7 +14,7 @@ Install my-project with npm
     
 ## Usage/Examples
 
-```javascript
+```bash
 ; ./target/release/vokobe --help
 vokobe 0.1.0
 A static site generator
